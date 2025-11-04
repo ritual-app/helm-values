@@ -1,0 +1,187 @@
+# Transcriber - Dev Environment
+# Complete Kubernetes configuration
+
+# 🖼️ Image Configuration
+image:
+  repository: us-east1-docker.pkg.dev/ritual-app-dev-104fc/transcriber
+  # tag is injected by CI/CD during rendering
+  pullPolicy: Always
+
+# 📊 Scaling
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+
+# 🔄 Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# 🛡️ Pod Disruption Budget
+podDisruptionBudget:
+  enabled: false
+
+# 🌐 Service
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+  annotations: {}
+
+# 🔐 Ingress
+ingress:
+  enabled: true
+  className: gce
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.allow-http: "false"
+  hosts:
+    - host: transcriber.dev.ourritual.com
+      paths:
+        - path: "/*"
+          pathType: ImplementationSpecific
+  tls:
+    - secretName: transcriber-dev-tls
+      hosts:
+        - transcriber.dev.ourritual.com
+
+# 🔒 Google Managed Certificate
+managedCertificate:
+  enabled: true
+  domains:
+    - transcriber.dev.ourritual.com
+
+# ⚙️ Backend Config
+backendConfig:
+  enabled: false
+  # Can enable IAP later if needed
+  # iap:
+  #   enabled: true
+  #   oauthclientCredentials:
+  #     secretName: iap-oauth-client-secret
+  timeoutSec: 30
+  connectionDraining:
+    drainingTimeoutSec: 60
+
+# 🌍 Environment Variables
+env:
+  - name: ENVIRONMENT
+    value: dev
+  - name: LOG_LEVEL
+    value: debug
+  - name: PORT
+    value: "8080"
+  - name: PROJECT_ID
+    value: ritual-app-dev-104fc
+  - name: REGION
+    value: us-east1
+
+# 🔐 Secrets (from Google Secret Manager)
+secrets:
+  - name: TRANSCRIBER_CONFIG
+    secretManagerRef:
+      name: transcriber
+      version: latest
+  - name: COMMON_SECRETS
+    secretManagerRef:
+      name: common-secrets
+      version: latest
+
+# GCP Project for Secret Manager
+gcpProject: ritual-app-dev-104fc
+
+# 🎭 Service Account (Workload Identity)
+serviceAccount:
+  create: false
+  name: transcriber-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+  annotations:
+    iam.gke.io/gcp-service-account: transcriber-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+
+# 🔒 Security Context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  capabilities:
+    drop:
+      - ALL
+
+# ❤️ Health Checks
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /startup
+    port: 8080
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 30
+
+# 🏷️ Labels
+labels:
+  app: transcriber
+  team: backend
+  tier: api
+  component: transcription
+  managed-by: argocd
+
+# 📝 Annotations
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/metrics"
+
+# 🌐 Network Policy
+networkPolicy:
+  enabled: false
+  # Can enable if needed:
+  # policyTypes:
+  #   - Ingress
+  #   - Egress
+
+# 🎯 Affinity
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - transcriber
+          topologyKey: kubernetes.io/hostname
+
+# 🏷️ Node Selector
+nodeSelector: {}
+
+# 🏷️ Tolerations
+tolerations: []
+
