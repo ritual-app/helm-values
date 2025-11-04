@@ -101,8 +101,8 @@ gcpProject: ritual-app-dev-104fc
 
 # 🎭 Service Account (Workload Identity)
 serviceAccount:
-  create: false
-  name: recording-webhook-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+  create: true
+  name: recording-webhook-sa
   annotations:
     iam.gke.io/gcp-service-account: recording-webhook-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
 
