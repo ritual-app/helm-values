@@ -1,0 +1,201 @@
+# Recording Webhook - Prod Environment
+# Complete Kubernetes configuration
+
+# 🖼️ Image Configuration
+image:
+  repository: us-east1-docker.pkg.dev/ritual-app-aa489/recording-webhook
+  # tag is injected by CI/CD during rendering
+  pullPolicy: Always
+
+# 📊 Scaling
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 2000m
+    memory: 1Gi
+
+# 🔄 Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# 🛡️ Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# 🌐 Service
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+  annotations: {}
+
+# 🔐 Ingress
+ingress:
+  enabled: true
+  className: gce
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.allow-http: "false"
+  hosts:
+    - host: recording-webhook.ourritual.com
+      paths:
+        - path: "/*"
+          pathType: ImplementationSpecific
+  tls:
+    - secretName: recording-webhook-prod-tls
+      hosts:
+        - recording-webhook.ourritual.com
+
+# 🔒 Google Managed Certificate
+managedCertificate:
+  enabled: true
+  domains:
+    - recording-webhook.ourritual.com
+
+# ⚙️ Backend Config
+backendConfig:
+  enabled: false
+  # Can enable IAP if needed:
+  # iap:
+  #   enabled: true
+  #   oauthclientCredentials:
+  #     secretName: iap-oauth-client-secret-prod
+  timeoutSec: 30
+  connectionDraining:
+    drainingTimeoutSec: 60
+
+# 🌍 Environment Variables
+env:
+  - name: ENVIRONMENT
+    value: prod
+  - name: LOG_LEVEL
+    value: info
+  - name: PORT
+    value: "8080"
+  - name: PROJECT_ID
+    value: ritual-app-aa489
+  - name: REGION
+    value: us-east1
+
+# 🔐 Secrets (from Google Secret Manager)
+secrets:
+  - name: RECORDING_WEBHOOK_CONFIG
+    secretManagerRef:
+      name: recording-webhook
+      version: latest
+  - name: COMMON_SECRETS
+    secretManagerRef:
+      name: common-secrets
+      version: latest
+
+# GCP Project for Secret Manager
+gcpProject: ritual-app-aa489
+
+# 🎭 Service Account (Workload Identity)
+serviceAccount:
+  create: false
+  name: recording-webhook-sa@ritual-app-aa489.iam.gserviceaccount.com
+  annotations:
+    iam.gke.io/gcp-service-account: recording-webhook-sa@ritual-app-aa489.iam.gserviceaccount.com
+
+# 🔒 Security Context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+# ❤️ Health Checks
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /startup
+    port: 8080
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 30
+
+# 🏷️ Labels
+labels:
+  app: recording-webhook
+  team: backend
+  tier: api
+  component: webhook
+  managed-by: argocd
+  environment: prod
+
+# 📝 Annotations
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/metrics"
+
+# 🌐 Network Policy
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: nginx-ingress
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443  # Allow HTTPS to external services
+
+# 🎯 Affinity
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - recording-webhook
+          topologyKey: kubernetes.io/hostname
+
+# 🏷️ Node Selector
+nodeSelector: {}
+
+# 🏷️ Tolerations
+tolerations: []
+
