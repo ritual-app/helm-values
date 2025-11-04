@@ -3,7 +3,7 @@
 
 # 🖼️ Image Configuration
 image:
-  repository: us-east1-docker.pkg.dev/ritual-app-dev-104fc/recording-webhook
+  repository: us-east1-docker.pkg.dev/ritual-app-dev-104fc/docker/recording_webhook
   # tag is injected by CI/CD during rendering
   pullPolicy: Always
 
