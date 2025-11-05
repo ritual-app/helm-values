@@ -37,7 +37,7 @@ service:
   targetPort: 8080
   annotations:
     cloud.google.com/neg: '{"ingress": true}'
-    cloud.google.com/backend-config: '{"default": "recording-webhook-microservice-backendconfig"}'
+    cloud.google.com/backend-config: '{"default": "recording-webhook-microservice-backend-config"}'
 
 # 🔐 Ingress
 ingress:
