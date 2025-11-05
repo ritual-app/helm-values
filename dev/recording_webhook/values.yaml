@@ -118,7 +118,7 @@ securityContext:
 # ❤️ Health Checks
 livenessProbe:
   httpGet:
-    path: /health
+    path: /
     port: 8080
   initialDelaySeconds: 30
   periodSeconds: 10
@@ -127,7 +127,7 @@ livenessProbe:
 
 readinessProbe:
   httpGet:
-    path: /ready
+    path: /
     port: 8080
   initialDelaySeconds: 5
   periodSeconds: 5
@@ -136,7 +136,7 @@ readinessProbe:
 
 startupProbe:
   httpGet:
-    path: /startup
+    path: /
     port: 8080
   initialDelaySeconds: 0
   periodSeconds: 10
