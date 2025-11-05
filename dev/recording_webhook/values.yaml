@@ -46,7 +46,8 @@ ingress:
   annotations:
     kubernetes.io/ingress.class: "gce"
     kubernetes.io/ingress.global-static-ip-name: "dev-ingress-ip"
-    kubernetes.io/ingress.allow-http: "true"  # Required for Google Managed Certificate validation
+    networking.gke.io/certificate-map: "dev-ourritual-map"
+    kubernetes.io/ingress.allow-http: "false"  # Force HTTPS only
   hosts:
     - host: recording-webhook.dev.ourritual.com
       paths:
@@ -56,7 +57,7 @@ ingress:
 
 # 🔒 Google Managed Certificate
 managedCertificate:
-  enabled: true
+  enabled: false  # Using Certificate Manager wildcard cert (dev-ourritual-wildcard-cert) via certificate-map
   domains:
     - recording-webhook.dev.ourritual.com
 
