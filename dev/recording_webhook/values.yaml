@@ -35,7 +35,9 @@ service:
   type: ClusterIP
   port: 8080
   targetPort: 8080
-  annotations: {}
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"default": "recording-webhook-microservice-backendconfig"}'
 
 # 🔐 Ingress
 ingress:
@@ -59,15 +61,18 @@ managedCertificate:
 
 # ⚙️ Backend Config
 backendConfig:
-  enabled: false
-  # Can enable IAP later if needed
-  # iap:
-  #   enabled: true
-  #   oauthclientCredentials:
-  #     secretName: iap-oauth-client-secret
+  enabled: true
+  healthCheck:
+    checkIntervalSec: 5
+    timeoutSec: 3
+    healthyThreshold: 1
+    unhealthyThreshold: 2
+    type: HTTP
+    requestPath: /
+    port: 8080
   timeoutSec: 30
   connectionDraining:
-    drainingTimeoutSec: 60
+    drainingTimeoutSec: 30
 
 # 🌍 Environment Variables
 env:
@@ -126,19 +131,19 @@ readinessProbe:
   httpGet:
     path: /
     port: 8080
-  initialDelaySeconds: 5
-  periodSeconds: 5
-  timeoutSeconds: 3
-  failureThreshold: 3
+  initialDelaySeconds: 3
+  periodSeconds: 3
+  timeoutSeconds: 2
+  failureThreshold: 2
 
 startupProbe:
   httpGet:
     path: /
     port: 8080
   initialDelaySeconds: 0
-  periodSeconds: 10
-  timeoutSeconds: 3
-  failureThreshold: 30
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 12
 
 # 🏷️ Labels
 labels:
