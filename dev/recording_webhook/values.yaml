@@ -49,10 +49,7 @@ ingress:
       paths:
         - path: "/*"
           pathType: ImplementationSpecific
-  tls:
-    - secretName: recording-webhook-dev-tls
-      hosts:
-        - recording-webhook.dev.ourritual.com
+  tls: []  # Using Google Managed Certificate instead
 
 # 🔒 Google Managed Certificate
 managedCertificate:
