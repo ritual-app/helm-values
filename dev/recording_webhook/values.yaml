@@ -37,7 +37,7 @@ service:
   targetPort: 8080
   annotations:
     cloud.google.com/neg: '{"ingress": true}'
-    cloud.google.com/backend-config: '{"default": "recording-webhook-microservice-backend-config"}'
+    # Note: BackendConfig is for Ingress only, not Gateway API
 
 # 🚀 Gateway API with cert-manager (FAST SSL provisioning - 2-3 min!)
 gateway:
@@ -46,9 +46,8 @@ gateway:
   redirectHTTPS: true  # Force HTTPS
   hosts:
     - host: recording-webhook.dev.ourritual.com
-  annotations:
-    cloud.google.com/backend-config: '{"default": "recording-webhook-microservice-backend-config"}'
-  # cert-manager will provision certificate via Let's Encrypt (2-3 min first time)
+  annotations: {}
+  # cert-manager will provision certificate via Let's Encrypt (DNS-01 with Cloudflare)
   certificate:
     enabled: true
     issuer: "letsencrypt-prod"  # Production Let's Encrypt
@@ -61,9 +60,9 @@ ingress:
 managedCertificate:
   enabled: false
 
-# ⚙️ Backend Config
+# ⚙️ Backend Config (NOT compatible with Gateway API - use GCPBackendPolicy instead)
 backendConfig:
-  enabled: true
+  enabled: false  # Disabled for Gateway API
   healthCheck:
     checkIntervalSec: 5
     timeoutSec: 3
