@@ -109,11 +109,17 @@ serviceAccount:
   annotations:
     iam.gke.io/gcp-service-account: recording-webhook-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
 
-# 🔒 Security Context
+# 🔒 Pod Security Context
 securityContext:
   runAsNonRoot: true
   runAsUser: 1000
   fsGroup: 1000
+
+# 🔒 Container Security Context
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
   capabilities:
     drop:
       - ALL
