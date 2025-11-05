@@ -39,26 +39,24 @@ service:
     cloud.google.com/neg: '{"ingress": true}'
     cloud.google.com/backend-config: '{"default": "recording-webhook-microservice-backend-config"}'
 
-# 🔐 Ingress
-ingress:
+# 🚀 Gateway API (RECOMMENDED - instant SSL with wildcard cert!)
+gateway:
   enabled: true
-  className: gce
-  annotations:
-    kubernetes.io/ingress.class: "gce"
-    kubernetes.io/ingress.global-static-ip-name: "dev-ingress-ip"
-    kubernetes.io/ingress.allow-http: "true"  # Required for certificate validation
+  staticIPName: "dev-ingress-ip"  # Reuse existing static IP
+  certificateMap: "dev-ourritual-map"  # Wildcard cert: *.ourritual.com - INSTANT!
+  redirectHTTPS: true  # Force HTTPS
   hosts:
     - host: recording-webhook.dev.ourritual.com
-      paths:
-        - path: "/*"
-          pathType: ImplementationSpecific
-  tls: []  # Using Google Managed Certificate instead
+  annotations:
+    cloud.google.com/backend-config: '{"default": "recording-webhook-microservice-backend-config"}'
 
-# 🔒 Google Managed Certificate
+# 🔐 Ingress (Legacy - disabled in favor of Gateway API)
+ingress:
+  enabled: false
+
+# 🔒 Google Managed Certificate (Not needed with Gateway + certificate-map)
 managedCertificate:
-  enabled: true
-  domains:
-    - recording-webhook.dev.ourritual.com
+  enabled: false
 
 # ⚙️ Backend Config
 backendConfig:
