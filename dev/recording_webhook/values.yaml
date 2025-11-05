@@ -39,16 +39,19 @@ service:
     cloud.google.com/neg: '{"ingress": true}'
     cloud.google.com/backend-config: '{"default": "recording-webhook-microservice-backend-config"}'
 
-# 🚀 Gateway API (RECOMMENDED - instant SSL with wildcard cert!)
+# 🚀 Gateway API with cert-manager (FAST SSL provisioning - 2-3 min!)
 gateway:
   enabled: true
   staticIPName: "dev-ingress-ip"  # Reuse existing static IP
-  certificateMap: "dev-ourritual-map"  # Wildcard cert: *.ourritual.com - INSTANT!
   redirectHTTPS: true  # Force HTTPS
   hosts:
     - host: recording-webhook.dev.ourritual.com
   annotations:
     cloud.google.com/backend-config: '{"default": "recording-webhook-microservice-backend-config"}'
+  # cert-manager will provision certificate via Let's Encrypt (2-3 min first time)
+  certificate:
+    enabled: true
+    issuer: "letsencrypt-prod"  # Production Let's Encrypt
 
 # 🔐 Ingress (Legacy - disabled in favor of Gateway API)
 ingress:
