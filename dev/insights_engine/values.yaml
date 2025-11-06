@@ -1,24 +1,23 @@
-# Transcriber - Dev Environment
-# Kubernetes configuration for AI transcription service
-# ⚠️  HEAVY WORKLOAD: 8 CPU cores, 32Gi RAM for AI processing
+# Insights Engine - Dev Environment
+# Kubernetes configuration for internal microservice
 
 # 🖼️ Image Configuration
 image:
-  repository: us-east1-docker.pkg.dev/ritual-app-dev-104fc/docker/transcriber
+  repository: us-east1-docker.pkg.dev/ritual-app-dev-104fc/docker/insights_engine
   # tag is injected by CI/CD during rendering
   pullPolicy: Always
 
 # 📊 Scaling
 replicaCount: 1
 
-# 💪 Resources (HEAVY AI WORKLOAD)
+# 💪 Resources
 resources:
   requests:
-    cpu: 2000m
-    memory: 8Gi
+    cpu: 200m
+    memory: 512Mi
   limits:
-    cpu: 8000m
-    memory: 32Gi
+    cpu: 1000m
+    memory: 2Gi
 
 # 🔄 Autoscaling
 autoscaling:
@@ -55,15 +54,15 @@ env:
     value: ritual-app-dev-104fc
   - name: REGION
     value: us-east1
-  - name: TRANSCRIBER_CONFIG
+  - name: INSIGHTS_ENGINE_CONFIG
     valueFrom:
       secretKeyRef:
-        name: transcriber-microservice-secrets
-        key: TRANSCRIBER_CONFIG
+        name: insights-engine-microservice-secrets
+        key: INSIGHTS_ENGINE_CONFIG
 
 # 🔐 Secrets (from Google Secret Manager)
 secrets:
-  - name: transcriber
+  - name: insights-engine
     version: latest
   - name: common-secrets
     version: latest
@@ -74,9 +73,9 @@ gcpProject: ritual-app-dev-104fc
 # 🎭 Service Account (Workload Identity)
 serviceAccount:
   create: true
-  name: transcriber-sa
+  name: insights-engine-sa
   annotations:
-    iam.gke.io/gcp-service-account: transcriber-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+    iam.gke.io/gcp-service-account: insights-engine-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
 
 # 🔒 Security Context (Pod-level)
 securityContext:
@@ -94,17 +93,7 @@ containerSecurityContext:
       - ALL
 
 # ❤️ Health Checks (assuming service responds on /)
-# Longer timeouts for heavy AI processing
 livenessProbe:
-  httpGet:
-    path: /
-    port: 8080
-  initialDelaySeconds: 60
-  periodSeconds: 15
-  timeoutSeconds: 10
-  failureThreshold: 3
-
-readinessProbe:
   httpGet:
     path: /
     port: 8080
@@ -113,22 +102,30 @@ readinessProbe:
   timeoutSeconds: 5
   failureThreshold: 3
 
+readinessProbe:
+  httpGet:
+    path: /
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
 startupProbe:
   httpGet:
     path: /
     port: 8080
   initialDelaySeconds: 0
-  periodSeconds: 15
-  timeoutSeconds: 5
-  failureThreshold: 40  # Allow up to 10 minutes for heavy AI model loading
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 30
 
 # 🏷️ Labels
 labels:
-  app: transcriber
+  app: insights-engine
   team: backend
-  tier: ai
-  component: transcription
-  workload: heavy
+  tier: api
+  component: insights
   managed-by: argocd
 
 # 📝 Annotations
@@ -141,7 +138,7 @@ annotations:
 networkPolicy:
   enabled: false
 
-# 🎯 Affinity (prefer spreading across nodes for heavy workload)
+# 🎯 Affinity (prefer spreading across nodes)
 affinity:
   podAntiAffinity:
     preferredDuringSchedulingIgnoredDuringExecution:
@@ -152,7 +149,7 @@ affinity:
               - key: app
                 operator: In
                 values:
-                  - transcriber
+                  - insights-engine
           topologyKey: kubernetes.io/hostname
 
 # 🏷️ Node Selector
@@ -160,3 +157,4 @@ nodeSelector: {}
 
 # 🏷️ Tolerations
 tolerations: []
+
