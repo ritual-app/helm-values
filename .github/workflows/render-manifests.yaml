@@ -91,8 +91,8 @@ jobs:
           DEPLOYMENT_FILE="rendered-manifests/${ENVIRONMENT}/${SERVICE}/deployment.yaml"
           
           if [ -f "$DEPLOYMENT_FILE" ]; then
-            # Extract current image tag from deployment
-            CURRENT_IMAGE=$(grep -A 5 "image:" "$DEPLOYMENT_FILE" | grep "image:" | awk '{print $2}' | head -1)
+            # Extract current image tag from deployment (strip quotes)
+            CURRENT_IMAGE=$(grep -A 5 "image:" "$DEPLOYMENT_FILE" | grep "image:" | awk '{print $2}' | head -1 | tr -d '"')
             IMAGE_TAG=$(echo "$CURRENT_IMAGE" | cut -d: -f2)
             IMAGE_REPO=$(echo "$CURRENT_IMAGE" | cut -d: -f1)
             
