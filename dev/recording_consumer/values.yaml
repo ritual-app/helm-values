@@ -54,18 +54,17 @@ env:
     value: ritual-app-dev-104fc
   - name: REGION
     value: us-east1
-  - name: RECORDING_CONSUMER_CONFIG
-    valueFrom:
-      secretKeyRef:
-        name: recording-consumer-microservice-secrets
-        key: RECORDING_CONSUMER_CONFIG
 
 # 🔐 Secrets (from Google Secret Manager)
 secrets:
-  - name: recording-consumer
-    version: latest
-  - name: common-secrets
-    version: latest
+  - name: RECORDING_CONSUMER_CONFIG
+    secretManagerRef:
+      name: recording-consumer
+      version: latest
+  - name: COMMON_SECRETS
+    secretManagerRef:
+      name: common-secrets
+      version: latest
 
 # GCP Project for Secret Manager
 gcpProject: ritual-app-dev-104fc
