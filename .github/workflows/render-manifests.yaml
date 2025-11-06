@@ -75,7 +75,7 @@ jobs:
           repository: ritual-app/rendered-manifests
           ref: main
           path: rendered-manifests
-          token: ${{ secrets.RENDERED_MANIFESTS_TOKEN }}
+          token: ${{ secrets.SHARED_DISPATCH_TOKEN }}
 
       - name: Get current image tag
         id: get-image
@@ -153,7 +153,7 @@ jobs:
           ENVIRONMENT: ${{ steps.parse.outputs.environment }}
           SERVICE: ${{ steps.parse.outputs.service }}
           IMAGE_TAG: ${{ steps.get-image.outputs.image_tag }}
-          RENDERED_REPO_TOKEN: ${{ secrets.RENDERED_MANIFESTS_TOKEN }}
+          RENDERED_REPO_TOKEN: ${{ secrets.SHARED_DISPATCH_TOKEN }}
           HELM_TEMPLATES_VERSION: ${{ env.HELM_TEMPLATES_VERSION }}
         run: |
           echo "📦 Pushing rendered manifests..."
