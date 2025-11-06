@@ -8,6 +8,9 @@ on:
       - 'dev/**/*.yaml'
       - 'prod/**/*.yaml'
 
+permissions:
+  contents: write  # Required to push to rendered-manifests repo
+  
 env:
   HELM_TEMPLATES_VERSION: v1.1.2
 
