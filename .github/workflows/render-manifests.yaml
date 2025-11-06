@@ -1,0 +1,229 @@
+name: Render Manifests on Values Change
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dev/**/*.yaml'
+      - 'prod/**/*.yaml'
+
+env:
+  HELM_TEMPLATES_VERSION: v1.1.2
+
+jobs:
+  detect-changes:
+    name: Detect Changed Services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.detect.outputs.services }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed services
+        id: detect
+        run: |
+          echo "🔍 Detecting which service values changed..."
+          
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          
+          # Extract service names and environments
+          SERVICES=$(echo "$CHANGED_FILES" | grep -E '(dev|prod)/[^/]+/values\.yaml' | \
+            awk -F'/' '{print $1 ":" $2}' | sort -u | jq -R -s -c 'split("\n")[:-1]')
+          
+          echo "Changed services: $SERVICES"
+          echo "services=$SERVICES" >> $GITHUB_OUTPUT
+
+  render-and-deploy:
+    name: Render ${{ matrix.service }}
+    needs: detect-changes
+    if: needs.detect-changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
+    steps:
+      - name: Parse environment and service
+        id: parse
+        run: |
+          ENV=$(echo "${{ matrix.service }}" | cut -d: -f1)
+          SERVICE=$(echo "${{ matrix.service }}" | cut -d: -f2)
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "service=$SERVICE" >> $GITHUB_OUTPUT
+          echo "📦 Rendering: $SERVICE in $ENV environment"
+
+      - name: Checkout helm-values
+        uses: actions/checkout@v4
+        with:
+          path: helm-values
+
+      - name: Checkout helm-templates
+        uses: actions/checkout@v4
+        with:
+          repository: ritual-app/helm-templates
+          ref: ${{ env.HELM_TEMPLATES_VERSION }}
+          path: helm-templates
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout rendered-manifests
+        uses: actions/checkout@v4
+        with:
+          repository: ritual-app/rendered-manifests
+          ref: main
+          path: rendered-manifests
+          token: ${{ secrets.RENDERED_MANIFESTS_TOKEN }}
+
+      - name: Get current image tag
+        id: get-image
+        env:
+          ENVIRONMENT: ${{ steps.parse.outputs.environment }}
+          SERVICE: ${{ steps.parse.outputs.service }}
+        run: |
+          echo "🔍 Getting current image tag from rendered-manifests..."
+          
+          DEPLOYMENT_FILE="rendered-manifests/${ENVIRONMENT}/${SERVICE}/deployment.yaml"
+          
+          if [ -f "$DEPLOYMENT_FILE" ]; then
+            # Extract current image tag from deployment
+            CURRENT_IMAGE=$(grep -A 5 "image:" "$DEPLOYMENT_FILE" | grep "image:" | awk '{print $2}' | head -1)
+            IMAGE_TAG=$(echo "$CURRENT_IMAGE" | cut -d: -f2)
+            IMAGE_REPO=$(echo "$CURRENT_IMAGE" | cut -d: -f1)
+            
+            echo "Current image: $CURRENT_IMAGE"
+            echo "Repository: $IMAGE_REPO"
+            echo "Tag: $IMAGE_TAG"
+            
+            echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+            echo "image_repo=$IMAGE_REPO" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  No existing deployment found. Using 'main-latest' as default."
+            
+            # Determine registry based on environment
+            if [ "$ENVIRONMENT" = "dev" ]; then
+              PROJECT="ritual-app-dev-104fc"
+            else
+              PROJECT="ritual-app-aa489"
+            fi
+            
+            IMAGE_REPO="us-east1-docker.pkg.dev/${PROJECT}/docker/${SERVICE}"
+            IMAGE_TAG="main-latest"
+            
+            echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+            echo "image_repo=$IMAGE_REPO" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.0'
+
+      - name: Render Helm chart with new values
+        env:
+          ENVIRONMENT: ${{ steps.parse.outputs.environment }}
+          SERVICE: ${{ steps.parse.outputs.service }}
+          IMAGE_TAG: ${{ steps.get-image.outputs.image_tag }}
+          IMAGE_REPO: ${{ steps.get-image.outputs.image_repo }}
+        run: |
+          echo "🎨 Rendering Helm chart..."
+          echo "  Environment: ${ENVIRONMENT}"
+          echo "  Service: ${SERVICE}"
+          echo "  Image: ${IMAGE_REPO}:${IMAGE_TAG}"
+          
+          # Sanitize service name for Helm (replace underscore with dash)
+          HELM_RELEASE_NAME=$(echo "${SERVICE}" | tr '_' '-')
+          echo "  Helm Release: ${HELM_RELEASE_NAME}"
+          
+          helm template ${HELM_RELEASE_NAME} \
+            helm-templates/${ENVIRONMENT} \
+            --values helm-values/${ENVIRONMENT}/${SERVICE}/values.yaml \
+            --set image.tag=${IMAGE_TAG} \
+            --set image.repository=${IMAGE_REPO} \
+            --namespace ${ENVIRONMENT} \
+            --output-dir ./rendered
+          
+          echo "✅ Rendered manifests:"
+          find ./rendered -type f -name "*.yaml" -exec echo "  - {}" \;
+
+      - name: Push rendered manifests
+        env:
+          ENVIRONMENT: ${{ steps.parse.outputs.environment }}
+          SERVICE: ${{ steps.parse.outputs.service }}
+          IMAGE_TAG: ${{ steps.get-image.outputs.image_tag }}
+          RENDERED_REPO_TOKEN: ${{ secrets.RENDERED_MANIFESTS_TOKEN }}
+          HELM_TEMPLATES_VERSION: ${{ env.HELM_TEMPLATES_VERSION }}
+        run: |
+          echo "📦 Pushing rendered manifests..."
+          
+          cd rendered-manifests
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Clear old manifests
+          rm -rf ${ENVIRONMENT}/${SERVICE}
+          mkdir -p ${ENVIRONMENT}/${SERVICE}
+          
+          # Copy new manifests
+          cp -r ../rendered/${ENVIRONMENT}/templates/* ${ENVIRONMENT}/${SERVICE}/ 2>/dev/null || \
+          cp -r ../rendered/microservice/templates/* ${ENVIRONMENT}/${SERVICE}/ || true
+          
+          # Add metadata to each file
+          for file in ${ENVIRONMENT}/${SERVICE}/*.yaml; do
+            if [[ -f "$file" ]]; then
+              cat > temp <<EOF
+          # 🤖 AUTO-GENERATED - DO NOT EDIT MANUALLY
+          # Generated by: GitHub Actions (helm-values repository)
+          # Service: ${SERVICE}
+          # Environment: ${ENVIRONMENT}
+          # Image Version: ${IMAGE_TAG} (unchanged - values only update)
+          # Helm Templates: ${HELM_TEMPLATES_VERSION}
+          # Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          # Commit SHA: ${{ github.sha }}
+          # Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # Reason: Values change in helm-values repository
+          ---
+EOF
+              cat "$file" >> temp
+              mv temp "$file"
+            fi
+          done
+          
+          # Commit and push
+          git add ${ENVIRONMENT}/${SERVICE}/
+          
+          if git diff --staged --quiet; then
+            echo "⚠️  No changes to commit"
+          else
+            git commit -m "🔧 Update ${SERVICE} ${ENVIRONMENT} config (values only)
+
+          Updated by: helm-values workflow
+          Image tag: ${IMAGE_TAG} (unchanged)
+          Values commit: ${{ github.sha }}
+          
+          This is a configuration-only update (no Docker build)"
+            
+            git push
+            echo "✅ Manifests pushed successfully!"
+          fi
+
+      - name: Summary
+        env:
+          ENVIRONMENT: ${{ steps.parse.outputs.environment }}
+          SERVICE: ${{ steps.parse.outputs.service }}
+          IMAGE_TAG: ${{ steps.get-image.outputs.image_tag }}
+        run: |
+          echo "## ✅ Config Update Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service:** \`${SERVICE}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** \`${ENVIRONMENT}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** \`${IMAGE_TAG}\` (unchanged)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**⏱️ No Docker build required - config-only update!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "ArgoCD will auto-sync the changes within 3 minutes." >> $GITHUB_STEP_SUMMARY
+
