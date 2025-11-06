@@ -194,3 +194,6 @@ nodeSelector: {}
 # 🏷️ Tolerations
 tolerations: []
 
+
+# Test: Helm values auto-deploy workflow
+# Triggered at: Thu Nov  6 12:33:05 IST 2025
