@@ -198,3 +198,4 @@ tolerations: []
 # Test 2: Helm values auto-deploy workflow
 # Triggered at: Thu Nov  6 12:33:05 IST 2025
 # Test 3: Values-only change
+# Test 4: After syntax fix
