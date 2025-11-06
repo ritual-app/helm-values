@@ -195,10 +195,4 @@ nodeSelector: {}
 tolerations: []
 
 
-# Test 2: Helm values auto-deploy workflow
 # Triggered at: Thu Nov  6 12:33:05 IST 2025
-# Test 3: Values-only change
-# Test 4: After syntax fix
-# Test 5: After helm-templates v1.1.3 fix
-# Test 6: With v1.1.3 tag properly pushed
-# Test 7: Fixed quote stripping
