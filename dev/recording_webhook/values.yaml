@@ -200,3 +200,4 @@ tolerations: []
 # Test 3: Values-only change
 # Test 4: After syntax fix
 # Test 5: After helm-templates v1.1.3 fix
+# Test 6: With v1.1.3 tag properly pushed
