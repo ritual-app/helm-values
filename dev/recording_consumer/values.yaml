@@ -54,6 +54,8 @@ env:
     value: ritual-app-dev-104fc
   - name: REGION
     value: us-east1
+  - name: GOOGLE_CLOUD_PROJECT
+    value: ritual-app-dev-104fc
 
 # 🔐 Secrets (from Google Secret Manager)
 secrets:
