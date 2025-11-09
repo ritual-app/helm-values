@@ -127,19 +127,27 @@ externalSecrets:
   clusterLocation: us-east1
   refreshInterval: 1h
   
+  # Dedicated K8s SA for External Secrets Operator to fetch secrets
+  serviceAccount:
+    create: true
+    name: webhook-gateway-service-eso-sa
+    annotations:
+      # This GCP SA has secret-level IAM permissions (managed by Terraform)
+      iam.gke.io/gcp-service-account: webhook-gateway-eso-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+  
   # Secrets to sync from GCP Secret Manager
-  # The GCP Service Account (webhook-gateway-service-secrets-sa) has access to these
   secretNames:
     - webhook-gateway-service
     - common-secrets
 
-# 🎭 Service Account (Workload Identity)
+# 🎭 Service Account (Workload Identity) - For Pod Runtime
 serviceAccount:
   create: true
   name: webhook-gateway-service-sa
   annotations:
-    # This GCP SA has secret-level IAM permissions (managed by Terraform)
-    iam.gke.io/gcp-service-account: webhook-gateway-eso-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+    # This GCP SA is for application runtime (logging, Pub/Sub, etc.)
+    # Managed by Terraform: cloud_infrastructure/environment/dev/ai/main.tf
+    iam.gke.io/gcp-service-account: webhook-gateway-service-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
 
 # 🔒 Pod Security Context
 securityContext:
