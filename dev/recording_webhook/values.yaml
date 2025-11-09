@@ -101,18 +101,19 @@ env:
 # from GCP Secret Manager secret: "recording-webhook-config"
 # Managed by: ExternalSecret CRD in dev namespace
 
-# 🔐 Secrets (from Google Secret Manager)
-secrets:
-  - name: RECORDING_WEBHOOK_CONFIG
-    secretManagerRef:
-      name: recording-webhook
-      version: latest
-  - name: COMMON_SECRETS
-    secretManagerRef:
-      name: common-secrets
-      version: latest
+# 🔐 Secrets
+# Secrets are automatically synced by External Secrets Operator
+# The secret "recording-webhook-microservice-secrets" is created by:
+# - ExternalSecret CRD: recording-webhook-config (in dev namespace)
+# - Source: GCP Secret Manager secret "recording-webhook-config"
+# - Refresh: Every 1 hour
+#
+# This secret is loaded via envFrom in the Helm template deployment.yaml
+# No additional secret configuration needed here.
 
-# GCP Project for Secret Manager
+secrets: []  # Empty - using ExternalSecret instead
+
+# GCP Project (for reference only, not used for secret fetching)
 gcpProject: ritual-app-dev-104fc
 
 # 🎭 Service Account (Workload Identity)
