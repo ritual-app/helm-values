@@ -43,33 +43,57 @@ service:
 gateway:
   enabled: false
 
-# 🌍 Environment Variables
+# 🌍 Environment Variables (non-secret)
 env:
-  - name: ENVIRONMENT
-    value: dev
-  - name: LOG_LEVEL
-    value: DEBUG
   - name: PORT
     value: "8080"
   - name: PROJECT_ID
     value: ritual-app-dev-104fc
+  - name: GCP_PROJECT_ID
+    value: ritual-app-dev-104fc
+  - name: ENVIRONMENT
+    value: dev
+  - name: LOG_LEVEL
+    value: DEBUG
   - name: REGION
     value: us-east1
-  - name: TRANSCRIBER_CONFIG
-    valueFrom:
-      secretKeyRef:
-        name: transcriber-microservice-secrets
-        key: TRANSCRIBER_CONFIG
 
-# 🔐 Secrets (from Google Secret Manager)
+# ℹ️ Secrets are automatically synced by External Secrets Operator
+# The secret "transcriber-microservice-secrets" is managed by:
+# - ExternalSecret CRD: transcriber-microservice-config (in dev namespace)
+# - Source: GCP Secret Manager secret "transcriber" and "common-secrets"
+# - Refresh: Every 1 hour
+#
+# This dummy entry ensures envFrom is rendered in deployment.yaml.
+# The actual secret content is populated by ExternalSecret, not by these values.
 secrets:
-  - name: transcriber
-    version: latest
-  - name: common-secrets
-    version: latest
+  - name: _managed_by_external_secrets_operator
+    value: "true"
 
-# GCP Project for Secret Manager
+# GCP Project (for reference only, not used for secret fetching)
 gcpProject: ritual-app-dev-104fc
+
+# 🔐 External Secrets Operator Configuration
+# Automatically syncs secrets from GCP Secret Manager to Kubernetes
+externalSecrets:
+  enabled: true
+  gcpProjectID: ritual-app-dev-104fc
+  clusterName: ritual-engine-dev
+  clusterLocation: us-east1
+  refreshInterval: 1h
+  
+  # Dedicated K8s SA for External Secrets Operator to fetch secrets
+  serviceAccount:
+    create: true
+    name: transcriber-eso-sa
+    annotations:
+      # This GCP SA has secret-level IAM permissions (managed by Terraform)
+      iam.gke.io/gcp-service-account: transcriber-secrets-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+  
+  # Secrets to sync from GCP Secret Manager
+  secretNames:
+    - transcriber
+    - common-secrets
 
 # 🎭 Service Account (Workload Identity)
 serviceAccount:
