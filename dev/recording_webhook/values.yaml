@@ -89,6 +89,48 @@ env:
     value: ritual-app-dev-104fc
   - name: REGION
     value: us-east1
+  # ritual-pipeline library configuration
+  - name: env
+    value: dev
+  - name: log_level
+    value: INFO
+  - name: log_type
+    value: gcp
+  - name: debug
+    value: "false"
+  - name: sentry_live
+    value: "true"
+  - name: enable_app_metrics
+    value: "true"
+  - name: gcp_project_id
+    value: ritual-app-dev-104fc
+  - name: outgoing_topic  # PubSub topic name to publish messages to
+    value: recording-consumer
+  - name: dlq_subscription  # Dead letter queue subscription
+    value: recording-webhook-dlq
+  - name: bucket_name
+    value: ritual-sessions-dev
+  - name: authentication_url
+    value: https://3lxyswdxqgvxkqvrc2r4h6vam40ymhys.lambda-url.us-east-1.on.aws/
+  - name: management_url
+    value: http://management.ritual.internal
+  # OpenTelemetry configuration
+  - name: OTEL_EXPORTER_OTLP_PROTOCOL
+    value: http/protobuf
+  - name: OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
+    value: http/protobuf
+  - name: OTEL_EXPORTER_OTLP_METRICS_PROTOCOL
+    value: http/protobuf
+  - name: OTEL_EXPORTER_OTLP_LOGS_PROTOCOL
+    value: http/protobuf
+  - name: OTEL_EXPORTER_OTLP_TIMEOUT
+    value: "60000"
+  - name: OTEL_EXPORTER_OTLP_METRICS_TIMEOUT
+    value: "60000"
+  - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+    value: delta
+  - name: SPANNER_ENABLE_END_TO_END_TRACING
+    value: "true"
 
 # 🔐 Secrets (from Google Secret Manager)
 secrets:
