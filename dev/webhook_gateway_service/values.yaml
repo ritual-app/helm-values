@@ -1,9 +1,9 @@
-# Recording Webhook - Dev Environment
+# Webhook Gateway Service - Dev Environment
 # Complete Kubernetes configuration
 
 # 🖼️ Image Configuration
 image:
-  repository: us-east1-docker.pkg.dev/ritual-app-dev-104fc/docker/recording_webhook
+  repository: us-east1-docker.pkg.dev/ritual-app-dev-104fc/docker/webhook_gateway_service
   # tag is injected by CI/CD during rendering
   pullPolicy: Always
 
@@ -45,7 +45,7 @@ gateway:
   staticIPName: "dev-ingress-ip"  # Reuse existing static IP
   redirectHTTPS: true  # Force HTTPS
   hosts:
-    - host: recording-webhook.dev.ourritual.com
+    - host: webhook-gateway-service.dev.ourritual.com
   annotations: {}
   # cert-manager will provision certificate via Let's Encrypt (DNS-01 with Cloudflare)
   certificate:
@@ -128,19 +128,18 @@ externalSecrets:
   refreshInterval: 1h
   
   # Secrets to sync from GCP Secret Manager
-  # The GCP Service Account (recording-webhook-secrets-sa) has access to these
+  # The GCP Service Account (webhook-gateway-service-secrets-sa) has access to these
   secretNames:
-    - recording-webhook
-    - recording-webhook-config
+    - webhook-gateway-service
     - common-secrets
 
 # 🎭 Service Account (Workload Identity)
 serviceAccount:
   create: true
-  name: recording-webhook-sa
+  name: webhook-gateway-service-sa
   annotations:
     # This GCP SA has secret-level IAM permissions (managed by Terraform)
-    iam.gke.io/gcp-service-account: recording-webhook-secrets-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+    iam.gke.io/gcp-service-account: webhook-gateway-service-secrets-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
 
 # 🔒 Pod Security Context
 securityContext:
@@ -187,7 +186,7 @@ startupProbe:
 
 # 🏷️ Labels
 labels:
-  app: recording-webhook
+  app: webhook-gateway-service
   team: backend
   tier: api
   component: webhook
@@ -218,7 +217,7 @@ affinity:
               - key: app
                 operator: In
                 values:
-                  - recording-webhook
+                  - webhook-gateway-service
           topologyKey: kubernetes.io/hostname
 
 # 🏷️ Node Selector
