@@ -1,5 +1,5 @@
 # Recording Consumer - Dev Environment
-# Kubernetes configuration for internal microservice
+# Kubernetes configuration for GKE Autopilot
 
 # 🖼️ Image Configuration
 image:
@@ -10,11 +10,10 @@ image:
 # 📊 Scaling
 replicaCount: 1
 
-# 💪 Resources
 resources:
   requests:
-    cpu: 200m
-    memory: 512Mi
+    cpu: 1000m
+    memory: 2Gi
   limits:
     cpu: 1000m
     memory: 2Gi
@@ -31,54 +30,84 @@ autoscaling:
 podDisruptionBudget:
   enabled: false
 
-# 🌐 Service (Internal ClusterIP - no external access)
+# 🌐 Service (Internal - ClusterIP only)
 service:
   type: ClusterIP
   port: 8080
   targetPort: 8080
   annotations: {}
 
-# 🔐 Gateway API (Disabled - Internal service)
+# 🚫 NO Gateway API (Internal service)
 gateway:
+  enabled: false
+
+# 🚫 NO Ingress (Internal service)
+ingress:
+  enabled: false
+
+# 🚫 NO Managed Certificate (Internal service)
+managedCertificate:
   enabled: false
 
 # 🌍 Environment Variables
 env:
-  - name: ENVIRONMENT
-    value: dev
-  - name: LOG_LEVEL
-    value: DEBUG
   - name: PORT
     value: "8080"
   - name: PROJECT_ID
     value: ritual-app-dev-104fc
+  - name: GCP_PROJECT_ID
+    value: ritual-app-dev-104fc
+  - name: ENVIRONMENT
+    value: dev
   - name: REGION
     value: us-east1
-  - name: GOOGLE_CLOUD_PROJECT
-    value: ritual-app-dev-104fc
 
-# 🔐 Secrets (from Google Secret Manager)
+# ℹ️  All other environment variables (Pub/Sub topics, subscriptions, etc.)
+# are automatically synced from GCP Secret Manager and Parameter Manager
+# via External Secrets Operator
+
+# 🔐 Secrets
+# Secrets are automatically synced by External Secrets Operator
+# This dummy entry ensures envFrom is rendered in deployment.yaml
 secrets:
-  - name: RECORDING_CONSUMER_CONFIG
-    secretManagerRef:
-      name: recording-consumer
-      version: latest
-  - name: COMMON_SECRETS
-    secretManagerRef:
-      name: common-secrets
-      version: latest
+  - name: _managed_by_external_secrets_operator
+    value: "true"
 
-# GCP Project for Secret Manager
+# GCP Project (for reference only)
 gcpProject: ritual-app-dev-104fc
 
-# 🎭 Service Account (Workload Identity)
+# 🔐 External Secrets Operator Configuration
+# Automatically syncs secrets from GCP Secret Manager to Kubernetes
+externalSecrets:
+  enabled: true
+  gcpProjectID: ritual-app-dev-104fc
+  clusterName: ritual-engine-dev
+  clusterLocation: us-east1
+  refreshInterval: 1h
+  
+  # Dedicated K8s SA for External Secrets Operator to fetch secrets
+  serviceAccount:
+    create: true
+    name: recording-consumer-eso-sa
+    annotations:
+      # This GCP SA has secret-level IAM permissions (managed by Terraform)
+      iam.gke.io/gcp-service-account: recording-consumer-secrets-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+  
+  # Secrets to sync from GCP Secret Manager
+  secretNames:
+    - recording-consumer
+    - common-secrets
+
+# 🎭 Service Account (Workload Identity) - For Pod Runtime
 serviceAccount:
   create: true
   name: recording-consumer-sa
   annotations:
+    # This GCP SA is for application runtime (Pub/Sub, logging, monitoring)
+    # Managed by Terraform: cloud_infrastructure/environment/dev/ai/main.tf
     iam.gke.io/gcp-service-account: recording-consumer-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
 
-# 🔒 Security Context (Pod-level)
+# 🔒 Pod Security Context
 securityContext:
   runAsNonRoot: true
   runAsUser: 1000
@@ -93,7 +122,7 @@ containerSecurityContext:
     drop:
       - ALL
 
-# ❤️ Health Checks (assuming service responds on /)
+# ❤️ Health Checks
 livenessProbe:
   httpGet:
     path: /
@@ -122,40 +151,11 @@ startupProbe:
   failureThreshold: 30
 
 # 🏷️ Labels
-labels:
-  app: recording-consumer
-  team: backend
-  tier: worker
-  component: consumer
-  managed-by: argocd
+app: recording-consumer
+component: consumer
+tier: backend
+team: backend
+environment: dev
 
 # 📝 Annotations
-annotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/port: "8080"
-  prometheus.io/path: "/metrics"
-
-# 🌐 Network Policy
-networkPolicy:
-  enabled: false
-
-# 🎯 Affinity (prefer spreading across nodes)
-affinity:
-  podAntiAffinity:
-    preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 100
-        podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-              - key: app
-                operator: In
-                values:
-                  - recording-consumer
-          topologyKey: kubernetes.io/hostname
-
-# 🏷️ Node Selector
-nodeSelector: {}
-
-# 🏷️ Tolerations
-tolerations: []
-
+annotations: {}
