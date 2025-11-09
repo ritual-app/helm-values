@@ -139,7 +139,7 @@ serviceAccount:
   name: webhook-gateway-service-sa
   annotations:
     # This GCP SA has secret-level IAM permissions (managed by Terraform)
-    iam.gke.io/gcp-service-account: webhook-gateway-service-secrets-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+    iam.gke.io/gcp-service-account: webhook-gateway-eso-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
 
 # 🔒 Pod Security Context
 securityContext:
