@@ -76,9 +76,11 @@ backendConfig:
     drainingTimeoutSec: 30
 
 # 🌍 Environment Variables
-# Note: Most environment variables are auto-fetched from GCP Parameter Manager
-# during deployment (see dev-deploy.yaml workflow). Only K8s-specific overrides
-# and critical configs should be hardcoded here.
+# Most environment variables are automatically synced from GCP Secret Manager
+# via External Secrets Operator. See ExternalSecret: recording-webhook-config
+#
+# The secret "recording-webhook-microservice-secrets" is created automatically
+# and loaded via envFrom (see secrets section below).
 
 env:
   - name: PORT
@@ -87,13 +89,17 @@ env:
     value: ritual-app-dev-104fc
   - name: GCP_PROJECT_ID  # Required by ritual-pipeline library
     value: ritual-app-dev-104fc
+  - name: ENVIRONMENT
+    value: dev
+  - name: LOG_LEVEL
+    value: DEBUG
+  - name: REGION
+    value: us-east1
 
-# All other environment variables (outgoing_topic, dlq_subscription, authentication_url,
-# OpenTelemetry config, etc.) are automatically fetched from:
-# - GCP Parameter Manager: "common-params" (shared across all services)
-# - GCP Parameter Manager: "recording-webhook" (service-specific params)
-#
-# This ensures parity with Cloud Run configuration and single source of truth.
+# ℹ️  All other environment variables (outgoing_topic, dlq_subscription, 
+# authentication_url, OpenTelemetry config, etc.) are automatically synced
+# from GCP Secret Manager secret: "recording-webhook-config"
+# Managed by: ExternalSecret CRD in dev namespace
 
 # 🔐 Secrets (from Google Secret Manager)
 secrets:
