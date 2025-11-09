@@ -45,7 +45,7 @@ gateway:
   staticIPName: "dev-ingress-ip"  # Reuse existing static IP
   redirectHTTPS: true  # Force HTTPS
   hosts:
-    - host: webhook-gateway-service.dev.ourritual.com
+    - host: webhooks.dev.ourritual.com
   annotations: {}
   # cert-manager will provision certificate via Let's Encrypt (DNS-01 with Cloudflare)
   certificate:
