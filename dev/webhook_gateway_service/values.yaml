@@ -123,7 +123,7 @@ gcpProject: ritual-app-dev-104fc
 externalSecrets:
   enabled: true
   gcpProjectID: ritual-app-dev-104fc
-  clusterName: ritual-dev-gke
+  clusterName: ritual-engine-dev
   clusterLocation: us-east1
   refreshInterval: 1h
   
