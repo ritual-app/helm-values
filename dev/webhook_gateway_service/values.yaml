@@ -35,8 +35,8 @@ service:
   type: ClusterIP
   port: 8080
   targetPort: 8080
-  annotations:
-    cloud.google.com/neg: '{"ingress": true}'
+  annotations: {}
+    # Note: cloud.google.com/neg is managed by GKE and should not be in values
     # Note: BackendConfig is for Ingress only, not Gateway API
 
 # 🚀 Gateway API with cert-manager (FAST SSL provisioning - 2-3 min!)
