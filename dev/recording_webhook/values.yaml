@@ -85,6 +85,8 @@ env:
     value: "8080"
   - name: PROJECT_ID
     value: ritual-app-dev-104fc
+  - name: GCP_PROJECT_ID  # Required by ritual-pipeline library for PubSub topic paths
+    value: ritual-app-dev-104fc
   - name: REGION
     value: us-east1
 
