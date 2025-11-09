@@ -103,15 +103,17 @@ env:
 
 # 🔐 Secrets
 # Secrets are automatically synced by External Secrets Operator
-# The secret "recording-webhook-microservice-secrets" is created by:
+# The secret "recording-webhook-microservice-secrets" is managed by:
 # - ExternalSecret CRD: recording-webhook-config (in dev namespace)
 # - Source: GCP Secret Manager secret "recording-webhook-config"
 # - Refresh: Every 1 hour
 #
-# This secret is loaded via envFrom in the Helm template deployment.yaml
-# No additional secret configuration needed here.
+# This dummy entry ensures envFrom is rendered in deployment.yaml.
+# The actual secret content is populated by ExternalSecret, not by these values.
 
-secrets: []  # Empty - using ExternalSecret instead
+secrets:
+  - name: _managed_by_external_secrets_operator
+    value: "true"
 
 # GCP Project (for reference only, not used for secret fetching)
 gcpProject: ritual-app-dev-104fc
