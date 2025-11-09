@@ -118,12 +118,29 @@ secrets:
 # GCP Project (for reference only, not used for secret fetching)
 gcpProject: ritual-app-dev-104fc
 
+# 🔐 External Secrets Operator Configuration
+# Automatically syncs secrets from GCP Secret Manager to Kubernetes
+externalSecrets:
+  enabled: true
+  gcpProjectID: ritual-app-dev-104fc
+  clusterName: ritual-dev-gke
+  clusterLocation: us-east1
+  refreshInterval: 1h
+  
+  # Secrets to sync from GCP Secret Manager
+  # The GCP Service Account (recording-webhook-secrets-sa) has access to these
+  secretNames:
+    - recording-webhook
+    - recording-webhook-config
+    - common-secrets
+
 # 🎭 Service Account (Workload Identity)
 serviceAccount:
   create: true
   name: recording-webhook-sa
   annotations:
-    iam.gke.io/gcp-service-account: recording-webhook-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+    # This GCP SA has secret-level IAM permissions (managed by Terraform)
+    iam.gke.io/gcp-service-account: recording-webhook-secrets-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
 
 # 🔒 Pod Security Context
 securityContext:
