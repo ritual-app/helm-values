@@ -1,0 +1,137 @@
+# insights-engine - Dev Environment
+# Kubernetes configuration for the insights-engine service
+
+# 🖼️ Image Configuration
+image:
+  repository: us-east1-docker.pkg.dev/ritual-app-dev-104fc/docker/insights-engine
+  # tag is injected by CI/CD during rendering
+  pullPolicy: Always
+
+# 📊 Scaling
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 2Gi # From Cloud Run config
+
+# 🔄 Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 10 # From Cloud Run config
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# 🛡️ Pod Disruption Budget
+podDisruptionBudget:
+  enabled: false
+
+# 🌐 Service (internal only)
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+  annotations: {}
+
+# 🔐 External Secrets Operator Configuration
+externalSecrets:
+  enabled: true
+  gcpProjectID: ritual-app-dev-104fc
+  clusterName: ritual-engine-dev # Ensure this matches your GKE cluster name
+  clusterLocation: us-east1
+  refreshInterval: 1h
+  
+  serviceAccount:
+    create: true
+    name: insights-engine-eso-sa
+    annotations:
+      iam.gke.io/gcp-service-account: insights-engine-secrets-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+  
+  secretNames:
+    - insights-engine
+    - common-secrets
+
+# 🎭 Service Account (Workload Identity) - For Pod Runtime
+serviceAccount:
+  create: true
+  name: insights-engine-sa
+  annotations:
+    iam.gke.io/gcp-service-account: insights-engine-sa@ritual-app-dev-104fc.iam.gserviceaccount.com
+
+# 🔒 Pod Security Context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# 🔒 Container Security Context
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  capabilities:
+    drop:
+      - ALL
+
+# ❤️ Health Checks
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  failureThreshold: 60 # Allow up to 5 minutes for startup
+
+# 📝 Environment Variables (non-secret)
+env:
+  - name: PORT
+    value: "8080"
+  - name: PROJECT_ID
+    value: ritual-app-dev-104fc
+  - name: GCP_PROJECT_ID
+    value: ritual-app-dev-104fc
+  - name: ENVIRONMENT
+    value: dev
+  - name: LOG_LEVEL
+    value: INFO
+  - name: REGION
+    value: us-east1
+  # Add other non-secret environment variables here if needed
+
+# ℹ️ Secrets are automatically synced by External Secrets Operator
+# The secret "insights-engine-microservice-secrets" is managed by:
+# - ExternalSecret CRD: insights-engine-microservice-config (in dev namespace)
+# - Source: GCP Secret Manager secret "insights-engine" and "common-secrets"
+# - Refresh: Every 1 hour
+#
+# This dummy entry ensures envFrom is rendered in deployment.yaml.
+# The actual secret content is populated by ExternalSecret, not by these values.
+secrets:
+  - name: _managed_by_external_secrets_operator
+    value: "true"
+
+# GCP Project (for reference only, not used for secret fetching)
+gcpProject: ritual-app-dev-104fc
+
