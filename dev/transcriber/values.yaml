@@ -39,9 +39,40 @@ service:
   targetPort: 8080
   annotations: {}
 
-# 🔐 Gateway API (Disabled - Internal service)
+# 🌐 Gateway API Configuration
 gateway:
-  enabled: false
+  enabled: false  # No public gateway
+  
+  # 📚 Additional routes for Swagger Gateway (IAP-protected)
+  # Access swagger UI at: swagger.dev.ourritual.com/transcriber/swagger
+  additionalRoutes:
+    - name: swagger
+      gatewayName: swagger-gateway
+      gatewayNamespace: dev
+      hosts:
+        - swagger.dev.ourritual.com
+      pathMatch:
+        type: PathPrefix
+        value: /transcriber
+      # No urlRewrite - pass through as-is
+
+# ⚙️ Backend Config for IAP (Swagger Gateway)
+backendConfig:
+  enabled: true
+  
+  # 🔒 IAP Configuration for Swagger Access
+  iap:
+    enabled: true
+    clientID: "1065179748589-1fcsfo37foa6ghcf5dao83t9el4qqk4k.apps.googleusercontent.com"
+    oauthSecretName: swagger-iap-oauth
+  
+  # 📌 Session Affinity
+  sessionAffinity:
+    affinityType: CLIENT_IP
+    affinityCookieTtlSec: 3600
+  
+  # ⏱️ Timeout
+  timeoutSec: 30
 
 # 🌍 Environment Variables (non-secret)
 env:
