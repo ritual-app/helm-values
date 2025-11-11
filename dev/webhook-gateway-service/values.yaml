@@ -52,9 +52,10 @@ gateway:
     enabled: true
     issuer: "letsencrypt-prod"  # Production Let's Encrypt
   
-  # 📚 Additional route for Swagger Gateway (IAP-protected)
-  # This creates a SECOND HTTPRoute that attaches to the shared swagger gateway
+  # 📚 Additional routes for Swagger Gateway (IAP-protected)
+  # This creates additional HTTPRoutes that attach to the shared swagger gateway
   additionalRoutes:
+    # Main swagger UI route
     - name: swagger
       gatewayName: swagger-gateway
       gatewayNamespace: dev
@@ -66,6 +67,18 @@ gateway:
       urlRewrite:
         type: ReplacePrefixMatch
         path: /swagger
+    # OpenAPI JSON route (must NOT rewrite to /swagger/openapi.json)
+    - name: openapi
+      gatewayName: swagger-gateway
+      gatewayNamespace: dev
+      hosts:
+        - swagger.dev.ourritual.com
+      pathMatch:
+        type: Exact
+        value: /webhook-gateway-service/openapi.json
+      urlRewrite:
+        type: ReplacePrefixMatch
+        path: /openapi.json
 
 # 🔐 Ingress (Legacy - disabled in favor of Gateway API)
 ingress:
