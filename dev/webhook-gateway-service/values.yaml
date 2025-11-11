@@ -83,6 +83,7 @@ backendConfig:
   # 🔒 IAP Configuration for Swagger Access
   iap:
     enabled: true
+    clientID: "1065179748589-1fcsfo37foa6ghcf5dao83t9el4qqk4k.apps.googleusercontent.com"
     oauthSecretName: swagger-iap-oauth  # Create this secret in Step 1.4 of setup guide
   
   # Health check
