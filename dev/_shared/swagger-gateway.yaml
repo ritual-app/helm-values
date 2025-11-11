@@ -1,6 +1,7 @@
 # Shared Swagger Gateway - One-Time Setup
 # This is applied manually once, not through CI/CD
 # Domain: swagger.dev.ourritual.com
+# Uses existing dev-ourritual-map certificate map with *.ourritual.com wildcard cert
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
@@ -11,8 +12,8 @@ metadata:
     app: swagger-gateway
     shared: "true"
   annotations:
-    # Link to the managed certificate
-    networking.gke.io/managed-certificates: swagger-gateway-cert
+    # Use existing certificate map with wildcard cert for *.ourritual.com
+    networking.gke.io/certificate-map: dev-ourritual-map
 spec:
   gatewayClassName: gke-l7-global-external-managed
   
@@ -29,14 +30,9 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
----
-# Managed Certificate for swagger.dev.ourritual.com
-apiVersion: networking.gke.io/v1
-kind: ManagedCertificate
-metadata:
-  name: swagger-gateway-cert
-  namespace: dev
-spec:
-  domains:
-    - swagger.dev.ourritual.com
+      tls:
+        mode: Terminate
+        options:
+          # Let GKE manage certificates via certificate map
+          networking.gke.io/certificate-map: dev-ourritual-map
 
