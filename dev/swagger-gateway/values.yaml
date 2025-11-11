@@ -1,57 +1,18 @@
 # swagger-gateway - Dev Environment
-# Centralized Swagger/API Documentation Gateway with IAP protection
-# Routes: swagger.dev.ourritual.com/<service-name> → service's /swagger endpoint
+# Infrastructure-only: ManagedCertificate + BackendConfig for IAP
+# NO pods/deployments - services define their own HTTPRoutes to swagger.dev.ourritual.com
 
-# 🖼️ Image Configuration
-# Note: This is a gateway service, no application image needed
-# We use a minimal nginx image just to have a pod running for the service
-image:
-  repository: nginx
-  tag: alpine
-  pullPolicy: IfNotPresent
+# ⚠️ IMPORTANT: This is infrastructure-only, no application deployment
+# Disable all pod/deployment/service resources
+replicaCount: 0
 
-# 📊 Scaling
-replicaCount: 1
-
-resources:
-  requests:
-    cpu: 10m
-    memory: 16Mi
-  limits:
-    cpu: 50m
-    memory: 64Mi
-
-# 🔄 Autoscaling - Disabled for gateway
-autoscaling:
-  enabled: false
-
-# 🌐 Service
-service:
-  type: ClusterIP
-  port: 80
-  targetPort: 80
-
-# 🚀 Ingress with IAP Protection
-ingress:
+# 🎫 Managed Certificate - ENABLED
+managedCertificate:
   enabled: true
-  className: gce
-  annotations:
-    # Use existing static IP
-    kubernetes.io/ingress.global-static-ip-name: "swagger-dev-ip"
-    # Enable IAP
-    kubernetes.io/ingress.allow-http: "false"
-    # Link to BackendConfig for IAP
-    cloud.google.com/backend-config: '{"default": "swagger-gateway-backend-config"}'
-    # Link to ManagedCertificate
-    networking.gke.io/managed-certificates: swagger-gateway-cert
-  hosts:
-    - host: swagger.dev.ourritual.com
-      paths:
-        - path: /*
-          pathType: ImplementationSpecific
-  tls: []
+  domains:
+    - swagger.dev.ourritual.com
 
-# 🔒 Backend Config for IAP
+# 🔒 Backend Config for IAP - ENABLED
 backendConfig:
   enabled: true
   iap:
@@ -63,54 +24,43 @@ backendConfig:
     healthyThreshold: 2
     unhealthyThreshold: 3
     type: HTTP
-    requestPath: /
-    port: 80
+    requestPath: /health
+    port: 8080
   sessionAffinity:
     affinityType: CLIENT_IP
     affinityCookieTtlSec: 3600
   timeoutSec: 30
 
-# 🎫 Managed Certificate
-managedCertificate:
-  enabled: true
-  domains:
-    - swagger.dev.ourritual.com
-
-# 🌍 Environment Variables
-env:
-  - name: NGINX_PORT
-    value: "80"
-
-# 🏥 Health Probes
-livenessProbe:
-  httpGet:
-    path: /
-    port: 80
-  initialDelaySeconds: 10
-  periodSeconds: 10
-
-readinessProbe:
-  httpGet:
-    path: /
-    port: 80
-  initialDelaySeconds: 5
-  periodSeconds: 5
-
-# 📝 Annotations
-annotations:
-  description: "Centralized Swagger gateway with IAP protection"
-
-# 🏷️ Labels
-labels:
-  app: swagger-gateway
-  tier: infrastructure
-  component: api-docs
-
-# External Secrets - Not needed for this infrastructure service
-externalSecrets:
+# All other resources DISABLED (no pods/services needed)
+deployment:
   enabled: false
 
-# Gateway API - Disabled, using Ingress instead
+service:
+  enabled: false
+
+ingress:
+  enabled: false
+
 gateway:
   enabled: false
 
+externalSecrets:
+  enabled: false
+
+autoscaling:
+  enabled: false
+
+# 📝 Annotations
+annotations:
+  description: "Infrastructure-only: Certificate and IAP config for swagger.dev.ourritual.com"
+
+# 🏷️ Labels  
+labels:
+  app: swagger-gateway
+  tier: infrastructure
+  component: api-docs-infra
+
+# Note: Individual services (webhook-gateway-service, insights-engine, etc.) will:
+# 1. Define HTTPRoutes pointing to swagger.dev.ourritual.com/<service-name>
+# 2. Use this BackendConfig for IAP protection
+# 3. Backend traffic routes to their own service endpoints
