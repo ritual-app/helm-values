@@ -125,7 +125,7 @@ containerSecurityContext:
 # ❤️ Health Checks
 livenessProbe:
   httpGet:
-    path: /
+    path: /health
     port: 8080
   initialDelaySeconds: 30
   periodSeconds: 10
@@ -134,7 +134,7 @@ livenessProbe:
 
 readinessProbe:
   httpGet:
-    path: /
+    path: /ready
     port: 8080
   initialDelaySeconds: 10
   periodSeconds: 5
