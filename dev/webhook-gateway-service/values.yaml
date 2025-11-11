@@ -54,8 +54,10 @@ gateway:
   
   # 📚 Additional routes for Swagger Gateway (IAP-protected)
   # This creates additional HTTPRoutes that attach to the shared swagger gateway
+  # Note: No URL rewriting! The app is configured to serve under /webhook-gateway-service prefix
   additionalRoutes:
-    # Main swagger UI route
+    # Main route - passes through all paths as-is
+    # Includes: /webhook-gateway-service/swagger (UI), /webhook-gateway-service/env (API), etc.
     - name: swagger
       gatewayName: swagger-gateway
       gatewayNamespace: dev
@@ -64,21 +66,7 @@ gateway:
       pathMatch:
         type: PathPrefix
         value: /webhook-gateway-service
-      urlRewrite:
-        type: ReplacePrefixMatch
-        path: /swagger
-    # OpenAPI JSON route (prefix match, rewrite full path to /openapi.json)
-    - name: openapi
-      gatewayName: swagger-gateway
-      gatewayNamespace: dev
-      hosts:
-        - swagger.dev.ourritual.com
-      pathMatch:
-        type: PathPrefix
-        value: /webhook-gateway-service/openapi.json
-      urlRewrite:
-        type: ReplacePrefixMatch
-        path: /openapi.json
+      # No urlRewrite - pass through as-is
 
 # 🔐 Ingress (Legacy - disabled in favor of Gateway API)
 ingress:
