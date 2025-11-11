@@ -121,7 +121,7 @@ containerSecurityContext:
 # Longer timeouts for heavy AI processing
 livenessProbe:
   httpGet:
-    path: /
+    path: /health
     port: 8080
   initialDelaySeconds: 60
   periodSeconds: 15
@@ -130,7 +130,7 @@ livenessProbe:
 
 readinessProbe:
   httpGet:
-    path: /
+    path: /ready
     port: 8080
   initialDelaySeconds: 30
   periodSeconds: 10
