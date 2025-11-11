@@ -1,0 +1,51 @@
+# Shared Swagger Gateway - One-Time Setup
+# This is applied manually once, not through CI/CD
+# Domain: swagger.dev.ourritual.com
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: swagger-gateway
+  namespace: dev
+  labels:
+    app: swagger-gateway
+    shared: "true"
+spec:
+  gatewayClassName: gke-l7-global-external-managed
+  
+  # Create static IP first:
+  # gcloud compute addresses create swagger-dev-ip --global --project=ritual-app-dev-104fc
+  addresses:
+    - type: NamedAddress
+      value: swagger-dev-ip
+  
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+    
+    - name: https
+      protocol: HTTPS
+      port: 443
+      allowedRoutes:
+        namespaces:
+          from: Same
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: swagger-gateway-tls
+            kind: Secret
+---
+# Managed Certificate for swagger.dev.ourritual.com
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: swagger-gateway-cert
+  namespace: dev
+spec:
+  domains:
+    - swagger.dev.ourritual.com
+

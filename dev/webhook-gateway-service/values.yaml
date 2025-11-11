@@ -51,6 +51,21 @@ gateway:
   certificate:
     enabled: true
     issuer: "letsencrypt-prod"  # Production Let's Encrypt
+  
+  # 📚 Additional route for Swagger Gateway (IAP-protected)
+  # This creates a SECOND HTTPRoute that attaches to the shared swagger gateway
+  additionalRoutes:
+    - name: swagger
+      gatewayName: swagger-gateway
+      gatewayNamespace: dev
+      hosts:
+        - swagger.dev.ourritual.com
+      pathMatch:
+        type: PathPrefix
+        value: /webhook-gateway-service
+      urlRewrite:
+        type: ReplacePrefixMatch
+        path: /swagger
 
 # 🔐 Ingress (Legacy - disabled in favor of Gateway API)
 ingress:
@@ -60,20 +75,33 @@ ingress:
 managedCertificate:
   enabled: false
 
-# ⚙️ Backend Config (NOT compatible with Gateway API - use GCPBackendPolicy instead)
+# ⚙️ Backend Config for IAP (Swagger Gateway)
+# This is used by the swagger gateway route, not the public gateway
 backendConfig:
-  enabled: false  # Disabled for Gateway API
+  enabled: true
+  
+  # 🔒 IAP Configuration for Swagger Access
+  iap:
+    enabled: true
+    oauthSecretName: swagger-iap-oauth  # Create this secret in Step 1.4 of setup guide
+  
+  # Health check
   healthCheck:
-    checkIntervalSec: 5
-    timeoutSec: 3
-    healthyThreshold: 1
-    unhealthyThreshold: 2
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 2
+    unhealthyThreshold: 3
     type: HTTP
     requestPath: /
     port: 8080
+  
+  # Session affinity
+  sessionAffinity:
+    affinityType: CLIENT_IP
+    affinityCookieTtlSec: 3600
+  
+  # Backend timeout
   timeoutSec: 30
-  connectionDraining:
-    drainingTimeoutSec: 30
 
 # 🌍 Environment Variables
 # Most environment variables are automatically synced from GCP Secret Manager
