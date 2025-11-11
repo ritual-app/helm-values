@@ -67,17 +67,17 @@ gateway:
       urlRewrite:
         type: ReplacePrefixMatch
         path: /swagger
-    # OpenAPI JSON route (exact match, rewrite to root)
+    # OpenAPI JSON route (prefix match, rewrite full path to /openapi.json)
     - name: openapi
       gatewayName: swagger-gateway
       gatewayNamespace: dev
       hosts:
         - swagger.dev.ourritual.com
       pathMatch:
-        type: Exact
+        type: PathPrefix
         value: /webhook-gateway-service/openapi.json
       urlRewrite:
-        type: ReplaceFullPath
+        type: ReplacePrefixMatch
         path: /openapi.json
 
 # 🔐 Ingress (Legacy - disabled in favor of Gateway API)
