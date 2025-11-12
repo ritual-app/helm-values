@@ -76,16 +76,20 @@ ingress:
 managedCertificate:
   enabled: false
 
-# ⚙️ Backend Config for IAP (Swagger Gateway)
-# This is used by the swagger gateway route, not the public gateway
+# ⚙️ Backend Config (Disabled for public gateway - no IAP)
+# IAP is handled at application level: only swagger.dev domain has IAP
+# Public webhooks.dev domain is fully open (IAP is applied via application middleware for /swagger path)
 backendConfig:
   enabled: true
   
-  # 🔒 IAP Configuration for Swagger Access
+  # 🔒 IAP Configuration - DISABLED for public gateway
+  # Swagger is protected via:
+  # 1. swagger.dev.ourritual.com with IAP (different domain)
+  # 2. Application-level middleware blocks /swagger on webhooks.dev domain
   iap:
-    enabled: true
+    enabled: false
     clientID: "1065179748589-1fcsfo37foa6ghcf5dao83t9el4qqk4k.apps.googleusercontent.com"
-    oauthSecretName: swagger-iap-oauth  # Create this secret in Step 1.4 of setup guide
+    oauthSecretName: swagger-iap-oauth
   
   # Health check
   healthCheck:
