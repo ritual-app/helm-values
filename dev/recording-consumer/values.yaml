@@ -190,4 +190,3 @@ environment: dev
 
 # 📝 Annotations
 annotations: {}
-# Trigger re-render with fixed Helm templates version
