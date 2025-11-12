@@ -8,7 +8,7 @@ image:
   pullPolicy: Always
 
 # 📊 Scaling
-replicaCount: 1
+replicaCount: 0 #1
 
 resources:
   requests:
@@ -21,7 +21,7 @@ resources:
 # 🔄 Autoscaling
 autoscaling:
   enabled: false # Temporarily disabled - keeping at 1 replica for debugging
-  minReplicas: 1
+  minReplicas: 0 #1
   maxReplicas: 10 # From Cloud Run config
   targetCPUUtilizationPercentage: 70
   targetMemoryUtilizationPercentage: 80
