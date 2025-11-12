@@ -266,3 +266,4 @@ tolerations: []
 
 
 # Triggered at: Thu Nov  6 12:33:05 IST 2025
+# Trigger re-render with fixed Helm templates version
