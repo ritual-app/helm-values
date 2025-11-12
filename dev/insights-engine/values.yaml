@@ -174,3 +174,4 @@ secrets:
 gcpProject: ritual-app-dev-104fc
 
 
+# Trigger re-render with parameter fix
