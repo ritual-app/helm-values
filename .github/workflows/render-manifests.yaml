@@ -158,7 +158,6 @@ jobs:
           fetch_params() {
             local PARAM=$1
             local OUTFILE=$2
-            local VER="latest"
             
             echo "  Fetching parameter: ${PARAM}"
             
@@ -169,6 +168,21 @@ jobs:
               echo "  ⚠️  Parameter ${PARAM} not found, skipping..."
               return
             fi
+            
+            # Get the latest version number (most recent)
+            local VER=$(gcloud parametermanager parameters versions list \
+              --parameter="${PARAM}" \
+              --project="${PROJECT_ID}" \
+              --location=global \
+              --format="value(name)" \
+              --limit=1 | awk -F'/' '{print $NF}')
+            
+            if [ -z "$VER" ]; then
+              echo "  ⚠️  No versions found for parameter ${PARAM}, skipping..."
+              return
+            fi
+            
+            echo "    Using version: ${VER}"
             
             # Fetch and decode
             local RAW=$(gcloud parametermanager parameters versions describe "${VER}" \
