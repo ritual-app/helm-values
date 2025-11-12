@@ -124,29 +124,143 @@ jobs:
         with:
           version: '3.13.0'
 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Fetch parameters from GCP Parameter Manager
+        id: fetch-params
+        env:
+          ENVIRONMENT: ${{ steps.parse.outputs.environment }}
+          SERVICE: ${{ steps.parse.outputs.service }}
+        run: |
+          echo "📋 Fetching parameters from GCP Parameter Manager..."
+          
+          # Determine project ID based on environment
+          if [ "$ENVIRONMENT" = "dev" ]; then
+            PROJECT_ID="ritual-app-dev-104fc"
+          else
+            PROJECT_ID="ritual-app-aa489"
+          fi
+          
+          echo "  Project: ${PROJECT_ID}"
+          echo "  Environment: ${ENVIRONMENT}"
+          echo "  Service: ${SERVICE}"
+          
+          # Function to fetch and flatten a parameter
+          fetch_params() {
+            local PARAM=$1
+            local OUTFILE=$2
+            local VER="latest"
+            
+            echo "  Fetching parameter: ${PARAM}"
+            
+            # Check if parameter exists
+            if ! gcloud parametermanager parameters describe "${PARAM}" \
+              --project="${PROJECT_ID}" \
+              --location=global &>/dev/null; then
+              echo "  ⚠️  Parameter ${PARAM} not found, skipping..."
+              return
+            fi
+            
+            # Fetch and decode
+            local RAW=$(gcloud parametermanager parameters versions describe "${VER}" \
+              --parameter="${PARAM}" \
+              --project="${PROJECT_ID}" \
+              --location=global \
+              --format="value(payload.data)")
+            
+            # Decode and flatten JSON to env format
+            echo "$RAW" | base64 --decode \
+              | jq -r '
+                  . as $in
+                  | paths(scalars) as $p
+                  | select($p|length > 1)
+                  | ($p[1:] | map(tostring) | join("_"))
+                    + "="
+                    + ($in|getpath($p) | tostring)
+                ' >> "$OUTFILE"
+          }
+          
+          # Create params file
+          > params.env
+          
+          # Fetch common parameters (shared across all services)
+          echo "📋 Fetching common-params..."
+          fetch_params "common-params" params.env || true
+          
+          # Fetch service-specific parameters
+          echo "📋 Fetching ${SERVICE} params..."
+          fetch_params "${SERVICE}" params.env || true
+          
+          # Convert to YAML format for Helm
+          echo "🔄 Converting to YAML format..."
+          > params.yaml
+          echo "# Auto-generated parameters from GCP Parameter Manager" >> params.yaml
+          echo "parametersFromGCP:" >> params.yaml
+          
+          while IFS='=' read -r key value; do
+            [[ -z "$key" ]] && continue
+            # Escape special YAML characters in value
+            value_escaped=$(echo "$value" | sed 's/"/\\"/g')
+            echo "  ${key}: \"${value_escaped}\"" >> params.yaml
+          done < params.env
+          
+          if [ -s params.env ]; then
+            echo ""
+            echo "✅ Parameters fetched and converted to YAML:"
+            cat params.yaml
+          else
+            echo "⚠️  No parameters found, using empty params file"
+          fi
+          
+          echo ""
+          echo "params_file=$(pwd)/params.yaml" >> $GITHUB_OUTPUT
+
       - name: Render Helm chart with new values
         env:
           ENVIRONMENT: ${{ steps.parse.outputs.environment }}
           SERVICE: ${{ steps.parse.outputs.service }}
           IMAGE_TAG: ${{ steps.get-image.outputs.image_tag }}
           IMAGE_REPO: ${{ steps.get-image.outputs.image_repo }}
+          PARAMS_FILE: ${{ steps.fetch-params.outputs.params_file }}
         run: |
           echo "🎨 Rendering Helm chart..."
           echo "  Environment: ${ENVIRONMENT}"
           echo "  Service: ${SERVICE}"
           echo "  Image: ${IMAGE_REPO}:${IMAGE_TAG}"
+          echo "  Parameters: ${PARAMS_FILE}"
           
           # Sanitize service name for Helm (replace underscore with dash)
           HELM_RELEASE_NAME=$(echo "${SERVICE}" | tr '_' '-')
           echo "  Helm Release: ${HELM_RELEASE_NAME}"
           
-          helm template ${HELM_RELEASE_NAME} \
-            helm-templates/${ENVIRONMENT} \
-            --values helm-values/${ENVIRONMENT}/${SERVICE}/values.yaml \
-            --set image.tag=${IMAGE_TAG} \
-            --set image.repository=${IMAGE_REPO} \
-            --namespace ${ENVIRONMENT} \
-            --output-dir ./rendered
+          # Build helm command with parameters if file exists
+          if [ -f "${PARAMS_FILE}" ] && [ -s "${PARAMS_FILE}" ]; then
+            echo "  ✓ Using parameters from GCP Parameter Manager"
+            helm template ${HELM_RELEASE_NAME} \
+              helm-templates/${ENVIRONMENT} \
+              --values helm-values/${ENVIRONMENT}/${SERVICE}/values.yaml \
+              --values ${PARAMS_FILE} \
+              --set image.tag=${IMAGE_TAG} \
+              --set image.repository=${IMAGE_REPO} \
+              --namespace ${ENVIRONMENT} \
+              --output-dir ./rendered
+          else
+            echo "  ⚠️ No parameters file, using only values.yaml"
+            helm template ${HELM_RELEASE_NAME} \
+              helm-templates/${ENVIRONMENT} \
+              --values helm-values/${ENVIRONMENT}/${SERVICE}/values.yaml \
+              --set image.tag=${IMAGE_TAG} \
+              --set image.repository=${IMAGE_REPO} \
+              --namespace ${ENVIRONMENT} \
+              --output-dir ./rendered
+          fi
           
           echo "✅ Rendered manifests:"
           find ./rendered -type f -name "*.yaml" -exec echo "  - {}" \;
