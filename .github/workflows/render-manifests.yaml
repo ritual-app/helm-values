@@ -326,11 +326,30 @@ jobs:
           
           This is a configuration-only update (no Docker build)"
             
-            # Pull latest changes before pushing (handles parallel workflow runs)
-            git pull --rebase origin main
+            # Pull and push with retry logic (handles parallel workflow runs)
+            MAX_RETRIES=5
+            RETRY_COUNT=0
             
-            git push
-            echo "✅ Manifests pushed successfully!"
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Pulling latest changes..."
+              git pull --rebase origin main
+              
+              echo "📤 Pushing changes..."
+              if git push; then
+                echo "✅ Manifests pushed successfully!"
+                break
+              else
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                  WAIT_TIME=$((RETRY_COUNT * 3))
+                  echo "⚠️  Push failed, retrying in ${WAIT_TIME}s..."
+                  sleep $WAIT_TIME
+                else
+                  echo "❌ Failed to push after $MAX_RETRIES attempts"
+                  exit 1
+                fi
+              fi
+            done
           fi
 
       - name: Summary
