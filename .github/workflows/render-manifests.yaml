@@ -210,6 +210,9 @@ jobs:
           
           This is a configuration-only update (no Docker build)"
             
+            # Pull latest changes before pushing (handles parallel workflow runs)
+            git pull --rebase origin main
+            
             git push
             echo "✅ Manifests pushed successfully!"
           fi
