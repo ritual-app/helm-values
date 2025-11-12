@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write  # Required to push to rendered-manifests repo
+  id-token: write  # Required for Workload Identity Federation (GCP auth)
   
 env:
   HELM_TEMPLATES_VERSION: v1.3.2  # Updated for GCPBackendPolicy support (Gateway API + IAP)
